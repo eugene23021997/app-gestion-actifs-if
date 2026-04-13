@@ -1,0 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+:root {
+  --red: #C8002D; --red-l: #FFF0F3; --dk: #111827; --sb: #0F172A; --sbh: #1E293B;
+  --bl: #3B82F6; --gn: #10B981; --or: #F59E0B; --pu: #8B5CF6;
+  --g50:#F9FAFB;--g100:#F3F4F6;--g200:#E5E7EB;--g300:#D1D5DB;--g400:#9CA3AF;--g500:#6B7280;--g600:#4B5563;--g700:#374151;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:#F1F5F9;color:var(--dk);margin:0}
+#root{display:flex;height:100vh;overflow:hidden}
