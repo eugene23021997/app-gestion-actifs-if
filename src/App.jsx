@@ -3,7 +3,8 @@ import './App.css'
 import {
   TECHNICENTRES, PATRIMOINES, GRANULARITE, OCCURRENCE, IMPACTS, IMPACT_LEVELS,
   INDICATEURS_GA, RACI_PROCESSUS, OUTILS_SI,
-  CYCLE_VIE, DEMO_ASSETS, PROJETS, SCENARIOS, ANNEES
+  CYCLE_VIE, DEMO_ASSETS, PROJETS, SCENARIOS, ANNEES,
+  DOMAINES, IMPACTS_GENERIQUES
 } from './data'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -23,6 +24,14 @@ const PRIO_COLOR = { P1: '#DC2626', P2: '#F59E0B', P3: '#10B981' }
 const PRIO_LABEL = { P1: 'Critique', P2: 'Elevee', P3: 'Moderee' }
 const CRIT_COLOR = ['#10B981', '#F59E0B', '#EA580C', '#DC2626']
 const ETAT_COLOR = { Satisfaisant: '#10B981', Acceptable: '#F59E0B', Moyen: '#EA580C', Insuffisant: '#DC2626' }
+const DOM_COLOR = {}; const DOM_BG = {}; const DOM_LABEL = {}; const DOM_ICON = {}
+DOMAINES.forEach(d => { DOM_COLOR[d.id] = d.color; DOM_BG[d.id] = d.bg; DOM_LABEL[d.id] = d.label; DOM_ICON[d.id] = d.icon })
+function projColor(p) { return DOM_COLOR[p.domaine] || PAT_COLOR[p.pat] || '#6B7280' }
+function projBg(p) { return DOM_BG[p.domaine] || PAT_BG[p.pat] || '#F3F4F6' }
+function projLabel(p) { return p.domaine === 'if' && p.pat ? `IF — ${PAT_LABEL[p.pat]}` : DOM_LABEL[p.domaine] || '—' }
+function projIcon(p) { return p.domaine === 'if' && p.pat ? PAT_ICON[p.pat] : DOM_ICON[p.domaine] || '📁' }
+function projChipClass(p) { return p.domaine === 'if' && p.pat ? `chip-${p.pat}` : '' }
+function getImpactCriteria(p) { if (p.domaine === 'if' && p.pat && IMPACTS[p.pat]) return IMPACTS[p.pat]; return IMPACTS_GENERIQUES }
 
 function scoreColor(s) {
   if (s >= 80) return '#DC2626'
@@ -166,18 +175,18 @@ function ModalAsset({ onClose, onSave, existing }) {
 function ModalProjet({ onClose, onSave, existing }) {
   const isEdit = !!existing
   const [form, setForm] = useState(existing
-    ? { nom: existing.nom, desc: existing.desc || '', pat: existing.pat, cat: existing.cat || '', tc: existing.tc,
+    ? { nom: existing.nom, desc: existing.desc || '', domaine: existing.domaine || 'if', pat: existing.pat || '', cat: existing.cat || '', tc: existing.tc,
         montant: String(existing.montant), priorite: existing.priorite, annee: existing.annee, trim: existing.trim, duree: existing.duree,
         roi: String(existing.roi || ''), conformite: existing.conformite || '', impacts: { ...existing.impacts } }
-    : { nom: '', desc: '', pat: 'immo', cat: '', tc: 'sdn',
+    : { nom: '', desc: '', domaine: 'if', pat: 'immo', cat: '', tc: 'sdn',
         montant: '', priorite: 'P2', annee: 2026, trim: 'T1', duree: 12,
         roi: '', conformite: '', impacts: {} }
   )
   const up = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const upImpact = (k, v) => setForm(f => ({ ...f, impacts: { ...f.impacts, [k]: v } }))
 
-  const cats = GRANULARITE[form.pat]?.categories || []
-  const impactCriteria = IMPACTS[form.pat] || []
+  const cats = form.domaine === 'if' && form.pat ? (GRANULARITE[form.pat]?.categories || []) : []
+  const impactCriteria = form.domaine === 'if' && form.pat && IMPACTS[form.pat] ? IMPACTS[form.pat] : IMPACTS_GENERIQUES
   const score = computeScore(form.priorite, form.impacts)
 
   const submit = () => {
@@ -185,8 +194,9 @@ function ModalProjet({ onClose, onSave, existing }) {
     onSave({
       id: existing?.id || Date.now(),
       nom: form.nom,
-      desc: form.desc || `Projet ${form.nom} — ${PAT_LABEL[form.pat]}`,
-      pat: form.pat,
+      desc: form.desc || `Projet ${form.nom} — ${DOM_LABEL[form.domaine]}`,
+      domaine: form.domaine,
+      pat: form.domaine === 'if' ? form.pat : null,
       cat: form.cat || cats[0]?.label || '',
       tc: form.tc,
       montant: +form.montant,
@@ -220,20 +230,26 @@ function ModalProjet({ onClose, onSave, existing }) {
 
           <div className="slbl" style={{ marginTop: 16 }}>Classification</div>
           <div className="fgrid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-            <div className="fg"><label>Patrimoine</label>
-              <select className="fi" value={form.pat} onChange={e => { setForm(f => ({ ...f, pat: e.target.value, cat: '', impacts: {} })) }}>
+            <div className="fg"><label>Domaine d'investissement</label>
+              <select className="fi" value={form.domaine} onChange={e => setForm(f => ({ ...f, domaine: e.target.value, pat: e.target.value === 'if' ? 'immo' : '', cat: '', impacts: {} }))}>
+                {DOMAINES.map(d => <option key={d.id} value={d.id}>{d.icon} {d.label}</option>)}
+              </select></div>
+            {form.domaine === 'if' && <div className="fg"><label>Patrimoine IF</label>
+              <select className="fi" value={form.pat} onChange={e => setForm(f => ({ ...f, pat: e.target.value, cat: '', impacts: {} }))}>
                 {PATRIMOINES.map(p => <option key={p.id} value={p.id}>{p.icon} {p.label}</option>)}
-              </select></div>
-            <div className="fg"><label>Categorie</label>
-              <select className="fi" value={form.cat} onChange={e => up('cat', e.target.value)}>
-                <option value="">— Selectionner —</option>
-                {cats.map(c => <option key={c.id} value={c.label}>{c.label}</option>)}
-              </select></div>
+              </select></div>}
             <div className="fg"><label>Technicentre</label>
               <select className="fi" value={form.tc} onChange={e => up('tc', e.target.value)}>
                 {TECHNICENTRES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select></div>
           </div>
+          {cats.length > 0 && <div className="fgrid" style={{ marginTop: 8 }}>
+            <div className="fg"><label>Categorie</label>
+              <select className="fi" value={form.cat} onChange={e => up('cat', e.target.value)}>
+                <option value="">— Selectionner —</option>
+                {cats.map(c => <option key={c.id} value={c.label}>{c.label}</option>)}
+              </select></div>
+          </div>}
 
           <div className="slbl" style={{ marginTop: 16 }}>Donnees financieres</div>
           <div className="fgrid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
@@ -309,19 +325,17 @@ function PageDashboard({ budget, projets, onNavigate }) {
   const p1Total = p1.reduce((s, p) => s + p.montant, 0)
   const roiTotal = projets.reduce((s, p) => s + p.roi, 0)
 
-  const pieData = ['immo', 'ferro', 'io'].map(pat => ({
-    name: PAT_LABEL[pat],
-    value: projets.filter(p => p.pat === pat).reduce((s, p) => s + p.montant, 0),
-    color: PAT_COLOR[pat],
-  }))
+  const pieData = DOMAINES.map(d => ({
+    name: d.label,
+    value: projets.filter(p => p.domaine === d.id).reduce((s, p) => s + p.montant, 0),
+    color: d.color,
+  })).filter(d => d.value > 0)
 
-  const yearData = ANNEES.map(y => ({
-    name: String(y),
-    Immobilier: projets.filter(p => p.pat === 'immo' && p.annee === y).reduce((s, p) => s + p.montant, 0),
-    Ferroviaire: projets.filter(p => p.pat === 'ferro' && p.annee === y).reduce((s, p) => s + p.montant, 0),
-    IO: projets.filter(p => p.pat === 'io' && p.annee === y).reduce((s, p) => s + p.montant, 0),
-    enveloppe: budget,
-  }))
+  const yearData = ANNEES.map(y => {
+    const row = { name: String(y), enveloppe: budget }
+    DOMAINES.forEach(d => { row[d.label] = projets.filter(p => p.domaine === d.id && p.annee === y).reduce((s, p) => s + p.montant, 0) })
+    return row
+  })
 
   const alerts = [
     { type: 'danger', icon: '🔴', text: 'Echeance ICPE station lavage : 31/12/2026 — projet non encore lance', action: 'Voir projet #4' },
@@ -352,9 +366,7 @@ function PageDashboard({ budget, projets, onNavigate }) {
               <YAxis fontSize={10} tickFormatter={v => `${v / 1000}M`} />
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="Immobilier" stackId="a" fill="#1D4ED8" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="Ferroviaire" stackId="a" fill="#B45309" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="IO" stackId="a" fill="#4338CA" radius={[4, 4, 0, 0]} />
+              {DOMAINES.map((d, i) => <Bar key={d.id} dataKey={d.label} stackId="a" fill={d.color} radius={i === DOMAINES.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />)}
               <Line type="stepAfter" dataKey="enveloppe" stroke="#DC2626" strokeWidth={2} strokeDasharray="6 3" dot={false} name="Enveloppe" />
             </ComposedChart>
           </ResponsiveContainer>
@@ -619,8 +631,8 @@ function PageTrajectoire({ budget, setBudget, projets }) {
 
   const chartData = ANNEES.map((y, i) => {
     const row = { name: String(y) }
-    ;['immo', 'ferro', 'io'].forEach(pat => {
-      row[PAT_LABEL[pat]] = funded.filter(p => p.funded && p.pat === pat && p.annee === y).reduce((s, p) => s + p.montant, 0)
+    DOMAINES.forEach(d => {
+      row[d.label] = funded.filter(p => p.funded && p.domaine === d.id && p.annee === y).reduce((s, p) => s + p.montant, 0)
     })
     SCENARIOS.forEach(s => { row[s.label] = s.budgets[i] })
     row.Enveloppe = budget
@@ -694,9 +706,7 @@ function PageTrajectoire({ budget, setBudget, projets }) {
               <YAxis fontSize={10} tickFormatter={v => `${(v / 1000).toFixed(0)}M`} />
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="Immobilier" stackId="inv" fill="#1D4ED8" />
-              <Bar dataKey="Ferroviaire" stackId="inv" fill="#B45309" />
-              <Bar dataKey="IO" stackId="inv" fill="#4338CA" radius={[3, 3, 0, 0]} />
+              {DOMAINES.map((d, i) => <Bar key={d.id} dataKey={d.label} stackId="inv" fill={d.color} radius={i === DOMAINES.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} />)}
               <Line type="monotone" dataKey="Enveloppe" stroke="#DC2626" strokeWidth={2.5} strokeDasharray="8 4" dot={false} />
               {SCENARIOS.map(s => (
                 <Line key={s.id} type="monotone" dataKey={s.label} stroke={s.color}
@@ -721,7 +731,7 @@ function PageTrajectoire({ budget, setBudget, projets }) {
                 <div className="proj-info">
                   <div className="proj-name">{p.nom}</div>
                   <div className="proj-meta">
-                    <span className={`chip chip-${p.pat}`} style={{ fontSize: 8 }}>{PAT_LABEL[p.pat]}</span>
+                    <span className="chip" style={{ background: projBg(p), color: projColor(p), fontSize: 8 }}>{projLabel(p)}</span>
                     <span className="chip" style={{ background: `${PRIO_COLOR[p.priorite]}18`, color: PRIO_COLOR[p.priorite], fontSize: 8 }}>{p.priorite}</span>
                   </div>
                 </div>
@@ -743,7 +753,7 @@ function PageTrajectoire({ budget, setBudget, projets }) {
           </div>
           <div className="card-b" style={{ maxHeight: 352, overflowY: 'auto' }}>
             <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-              <span className={`chip chip-${selected.pat}`}>{PAT_LABEL[selected.pat]}</span>
+              <span className="chip" style={{ background: projBg(selected), color: projColor(selected) }}>{projLabel(selected)}</span>
               <span className="chip" style={{ background: `${PRIO_COLOR[selected.priorite]}18`, color: PRIO_COLOR[selected.priorite] }}>{selected.priorite} — {PRIO_LABEL[selected.priorite]}</span>
               {selected.conformite && <span className="chip chip-red">{selected.conformite}</span>}
             </div>
@@ -778,7 +788,7 @@ function PageTrajectoire({ budget, setBudget, projets }) {
                   <PolarGrid stroke="#E5E7EB" />
                   <PolarAngleAxis dataKey="subject" fontSize={8} />
                   <PolarRadiusAxis domain={[0, 3]} tick={false} axisLine={false} />
-                  <Radar dataKey="value" stroke={PAT_COLOR[selected.pat]} fill={PAT_COLOR[selected.pat]} fillOpacity={0.3} strokeWidth={2} />
+                  <Radar dataKey="value" stroke={projColor(selected)} fill={projColor(selected)} fillOpacity={0.3} strokeWidth={2} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -832,7 +842,7 @@ function PageTrajectoire({ budget, setBudget, projets }) {
 
 function PagePriorisation({ budget, projets, setProjets }) {
   const [selectedId, setSelectedId] = useState(null)
-  const [filterPat, setFilterPat] = useState('all')
+  const [filterDom, setFilterDom] = useState('all')
   const [filterPrio, setFilterPrio] = useState('all')
   const [modalProjet, setModalProjet] = useState(null) // null=ferme, 'new'=ajout, {projet}=edition
 
@@ -848,7 +858,7 @@ function PagePriorisation({ budget, projets, setProjets }) {
   }, [sorted, budget])
 
   const filtered = funded.filter(p =>
-    (filterPat === 'all' || p.pat === filterPat) &&
+    (filterDom === 'all' || p.domaine === filterDom) &&
     (filterPrio === 'all' || p.priorite === filterPrio)
   )
 
@@ -885,12 +895,12 @@ function PagePriorisation({ budget, projets, setProjets }) {
         ))}
       </div>
       <div style={{ width: 1, height: 24, background: 'var(--g200)', margin: '0 4px' }} />
-      <div style={{ display: 'flex', gap: 4 }}>
-        {['all', 'immo', 'ferro', 'io'].map(p => (
-          <button key={p} className={`filter-btn ${filterPat === p ? 'active' : ''}`}
-            style={filterPat === p && p !== 'all' ? { background: PAT_BG[p], color: PAT_COLOR[p], borderColor: PAT_COLOR[p] } : {}}
-            onClick={() => setFilterPat(p)}>
-            {p === 'all' ? 'Tous' : `${PAT_ICON[p]} ${PAT_LABEL[p]}`}
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {['all', ...DOMAINES.map(d => d.id)].map(d => (
+          <button key={d} className={`filter-btn ${filterDom === d ? 'active' : ''}`}
+            style={filterDom === d && d !== 'all' ? { background: DOM_BG[d], color: DOM_COLOR[d], borderColor: DOM_COLOR[d] } : {}}
+            onClick={() => setFilterDom(d)}>
+            {d === 'all' ? 'Tous' : `${DOM_ICON[d]} ${DOM_LABEL[d]}`}
           </button>
         ))}
       </div>
@@ -908,7 +918,7 @@ function PagePriorisation({ budget, projets, setProjets }) {
               <th style={{ width: 40 }}>#</th>
               <th style={{ width: 50 }}>Score</th>
               <th>Projet</th>
-              <th>Patrimoine</th>
+              <th>Domaine</th>
               <th>Priorite</th>
               <th style={{ textAlign: 'right' }}>Montant</th>
               <th style={{ textAlign: 'right' }}>ROI</th>
@@ -924,7 +934,7 @@ function PagePriorisation({ budget, projets, setProjets }) {
                     <div style={{ fontWeight: 700, fontSize: 12 }}>{p.nom}</div>
                     <div style={{ fontSize: 10, color: 'var(--g400)' }}>{tcName(p.tc)} — {p.trim} {p.annee}</div>
                   </td>
-                  <td><span className={`chip chip-${p.pat}`}>{PAT_LABEL[p.pat]}</span></td>
+                  <td><span className="chip" style={{ background: projBg(p), color: projColor(p) }}>{projLabel(p)}</span></td>
                   <td><span className="chip" style={{ background: `${PRIO_COLOR[p.priorite]}18`, color: PRIO_COLOR[p.priorite] }}>{p.priorite}</span></td>
                   <td style={{ textAlign: 'right', fontWeight: 700 }}>{fmt(p.montant)} k</td>
                   <td style={{ textAlign: 'right', fontSize: 11, color: 'var(--g500)' }}>{fmt(p.roi)} k/an</td>
@@ -952,7 +962,7 @@ function PagePriorisation({ budget, projets, setProjets }) {
           <div className="card-b" style={{ maxHeight: 500, overflowY: 'auto' }}>
             <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{selected.nom}</h2>
             <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-              <span className={`chip chip-${selected.pat}`}>{PAT_LABEL[selected.pat]}</span>
+              <span className="chip" style={{ background: projBg(selected), color: projColor(selected) }}>{projLabel(selected)}</span>
               <span className="chip" style={{ background: `${PRIO_COLOR[selected.priorite]}18`, color: PRIO_COLOR[selected.priorite] }}>{selected.priorite} — {PRIO_LABEL[selected.priorite]}</span>
               {selected.conformite && <span className="chip chip-red">{selected.conformite}</span>}
             </div>
@@ -994,7 +1004,7 @@ function PagePriorisation({ budget, projets, setProjets }) {
                   <PolarGrid stroke="#E5E7EB" />
                   <PolarAngleAxis dataKey="subject" fontSize={9} />
                   <PolarRadiusAxis domain={[0, 3]} tick={false} axisLine={false} />
-                  <Radar dataKey="value" stroke={PAT_COLOR[selected.pat]} fill={PAT_COLOR[selected.pat]} fillOpacity={0.25} strokeWidth={2} />
+                  <Radar dataKey="value" stroke={projColor(selected)} fill={projColor(selected)} fillOpacity={0.25} strokeWidth={2} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -1021,7 +1031,9 @@ function PagePriorisation({ budget, projets, setProjets }) {
 // ─── PAGE: PLAN D'ACTIONS ──────────────────────────────────
 
 function PagePlanActions({ budget, projets }) {
-  const [expanded, setExpanded] = useState({ immo: true, ferro: true, io: true, 'immo-P1': true, 'immo-P2': true, 'immo-P3': true, 'ferro-P1': true, 'ferro-P2': true, 'ferro-P3': true, 'io-P1': true, 'io-P2': true, 'io-P3': true })
+  const initExpanded = {}
+  DOMAINES.forEach(d => { initExpanded[d.id] = true; ['P1','P2','P3'].forEach(p => { initExpanded[`${d.id}-${p}`] = true }) })
+  const [expanded, setExpanded] = useState(initExpanded)
 
   const toggle = key => setExpanded(prev => ({ ...prev, [key]: !prev[key] }))
 
@@ -1040,11 +1052,12 @@ function PagePlanActions({ budget, projets }) {
   const totalBesoin = projets.reduce((s, p) => s + p.montant, 0)
   const totalRoi = fundedList.reduce((s, p) => s + p.roi, 0)
 
-  const byPat = {}
+  const byDom = {}
   funded.forEach(p => {
-    if (!byPat[p.pat]) byPat[p.pat] = {}
-    if (!byPat[p.pat][p.priorite]) byPat[p.pat][p.priorite] = []
-    byPat[p.pat][p.priorite].push(p)
+    const dom = p.domaine || 'if'
+    if (!byDom[dom]) byDom[dom] = {}
+    if (!byDom[dom][p.priorite]) byDom[dom][p.priorite] = []
+    byDom[dom][p.priorite].push(p)
   })
 
   const scenarioLabel = SCENARIOS.reduce((best, s) => {
@@ -1078,33 +1091,34 @@ function PagePlanActions({ budget, projets }) {
     </div>
 
     <div className="plan-tree">
-      {['immo', 'ferro', 'io'].map((pat, patIdx) => {
-        const pats = byPat[pat] || {}
-        const patProjects = Object.values(pats).flat()
-        const patFunded = patProjects.filter(p => p.funded)
-        const patTotal = patFunded.reduce((s, p) => s + p.montant, 0)
-        const patPct = totalFunded > 0 ? Math.round(patTotal / totalFunded * 100) : 0
-        const isLast = patIdx === 2
+      {DOMAINES.filter(d => byDom[d.id]).map((dom, domIdx) => {
+        const domData = byDom[dom.id] || {}
+        const domProjects = Object.values(domData).flat()
+        const domFunded = domProjects.filter(p => p.funded)
+        const domTotal = domFunded.reduce((s, p) => s + p.montant, 0)
+        const domPct = totalFunded > 0 ? Math.round(domTotal / totalFunded * 100) : 0
+        const activeDomaines = DOMAINES.filter(d => byDom[d.id])
+        const isLast = domIdx === activeDomaines.length - 1
 
         return (
-          <div key={pat} className="tree-branch">
-            <div className={`tree-row tree-level-0 ${isLast ? 'tree-last' : ''}`} onClick={() => toggle(pat)}>
+          <div key={dom.id} className="tree-branch">
+            <div className={`tree-row tree-level-0 ${isLast ? 'tree-last' : ''}`} onClick={() => toggle(dom.id)}>
               <div className="tree-connector">
                 <span className={`tree-vline ${isLast ? 'tree-vline-last' : ''}`} />
                 <span className="tree-hline" />
               </div>
-              <span className={`tree-arrow ${expanded[pat] ? 'open' : ''}`}>&#9654;</span>
-              <span className="tree-icon-badge" style={{ background: PAT_BG[pat], color: PAT_COLOR[pat] }}>{PAT_ICON[pat]}</span>
-              <span className="tree-title">{PAT_LABEL[pat]}</span>
-              <span className="tree-amount-badge" style={{ background: PAT_BG[pat], color: PAT_COLOR[pat] }}>{fmt(patTotal)} k ({patPct}%)</span>
-              <span className="tree-count-badge">{patFunded.length} projet(s) retenu(s)</span>
+              <span className={`tree-arrow ${expanded[dom.id] ? 'open' : ''}`}>&#9654;</span>
+              <span className="tree-icon-badge" style={{ background: dom.bg, color: dom.color }}>{dom.icon}</span>
+              <span className="tree-title">{dom.label}</span>
+              <span className="tree-amount-badge" style={{ background: dom.bg, color: dom.color }}>{fmt(domTotal)} k ({domPct}%)</span>
+              <span className="tree-count-badge">{domFunded.length} projet(s) retenu(s)</span>
             </div>
 
-            {expanded[pat] && ['P1', 'P2', 'P3'].map((prio, prioIdx) => {
-              const projects = pats[prio] || []
+            {expanded[dom.id] && ['P1', 'P2', 'P3'].map((prio, prioIdx) => {
+              const projects = domData[prio] || []
               if (projects.length === 0) return null
-              const prioKey = `${pat}-${prio}`
-              const isLastPrio = prioIdx === ['P1', 'P2', 'P3'].filter(pr => (pats[pr] || []).length > 0).length - 1
+              const prioKey = `${dom.id}-${prio}`
+              const isLastPrio = prioIdx === ['P1', 'P2', 'P3'].filter(pr => (domData[pr] || []).length > 0).length - 1
 
               return (
                 <div key={prioKey} className="tree-prio-group">
@@ -1154,23 +1168,24 @@ function PagePlanActions({ budget, projets }) {
     <div className="card" style={{ marginTop: 16 }}>
       <div className="card-h"><h3>Synthese budgetaire</h3></div>
       <div className="card-b">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          {['immo', 'ferro', 'io'].map(pat => {
-            const patFunded = funded.filter(p => p.funded && p.pat === pat)
-            const patTotal = patFunded.reduce((s, p) => s + p.montant, 0)
-            const patDeferred = funded.filter(p => !p.funded && p.pat === pat)
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(DOMAINES.length, 5)}, 1fr)`, gap: 12 }}>
+          {DOMAINES.map(dom => {
+            const domFunded = funded.filter(p => p.funded && p.domaine === dom.id)
+            const domTotal = domFunded.reduce((s, p) => s + p.montant, 0)
+            const domDeferred = funded.filter(p => !p.funded && p.domaine === dom.id)
+            if (domFunded.length === 0 && domDeferred.length === 0) return null
             return (
-              <div key={pat} style={{ padding: 14, borderRadius: 8, border: `1px solid ${PAT_COLOR[pat]}30`, background: `${PAT_BG[pat]}80` }}>
+              <div key={dom.id} style={{ padding: 14, borderRadius: 8, border: `1px solid ${dom.color}30`, background: `${dom.bg}80` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontSize: 16 }}>{PAT_ICON[pat]}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: PAT_COLOR[pat] }}>{PAT_LABEL[pat]}</span>
+                  <span style={{ fontSize: 16 }}>{dom.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: dom.color }}>{dom.label}</span>
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: PAT_COLOR[pat] }}>{fmt(patTotal)} k</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: dom.color }}>{fmt(domTotal)} k</div>
                 <div style={{ fontSize: 10, color: 'var(--g500)', marginTop: 2 }}>
-                  {patFunded.length} projet(s) finance(s) — {patDeferred.length} differe(s)
+                  {domFunded.length} finance(s) — {domDeferred.length} differe(s)
                 </div>
-                <div style={{ marginTop: 8, height: 4, background: `${PAT_COLOR[pat]}20`, borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${totalFunded > 0 ? patTotal / totalFunded * 100 : 0}%`, background: PAT_COLOR[pat], borderRadius: 2 }} />
+                <div style={{ marginTop: 8, height: 4, background: `${dom.color}20`, borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${totalFunded > 0 ? domTotal / totalFunded * 100 : 0}%`, background: dom.color, borderRadius: 2 }} />
                 </div>
               </div>
             )

@@ -150,13 +150,32 @@ export const DEMO_ASSETS = [
   { id: 12, nom: 'Monte-charge MC-02', pat: 'immo', tc: 'ttr', cat: 'Equiper — Equipements tech.', crit: 2, etat: 'Moyen', conform: false },
 ];
 
+// ===== DOMAINES D'INVESTISSEMENT =====
+
+export const DOMAINES = [
+  { id: 'if', label: 'Installations Fixes', icon: '🔧', color: '#C8002D', bg: '#FFF0F3' },
+  { id: 'construction', label: 'Construction neuve', icon: '🏗', color: '#1D4ED8', bg: '#DBEAFE' },
+  { id: 'capacitaire', label: 'Capacitaire', icon: '🚄', color: '#7C3AED', bg: '#EDE9FE' },
+  { id: 'digital', label: 'Transformation digitale', icon: '💻', color: '#0D9488', bg: '#CCFBF1' },
+  { id: 'rse', label: 'RSE / Environnement', icon: '🌱', color: '#059669', bg: '#D1FAE5' },
+];
+
+export const IMPACTS_GENERIQUES = [
+  { id: 'sec', label: 'Securite', lo: 'Aucun impact', hi: 'Impact majeur' },
+  { id: 'prod', label: 'Production', lo: 'Impact mineur', hi: 'Arret production' },
+  { id: 'fin', label: 'Financier', lo: 'Faible', hi: 'Tres eleve' },
+  { id: 'soc', label: 'Social', lo: 'Pas d\'impact', hi: 'Mouvement social' },
+  { id: 'img', label: 'Image', lo: 'Pas d\'impact', hi: 'Impact majeur' },
+];
+
 // ===== PROJETS D'INVESTISSEMENT =====
 
 export const PROJETS = [
+  // --- Domaine : Installations Fixes ---
   {
     id: 1, nom: 'Refection toiture Hall A',
     desc: 'Refection complete de la toiture du hall A suite aux infiltrations repetees. Structure metallique vieillissante avec risque d\'effondrement partiel identifie lors du DTA amiante.',
-    pat: 'immo', cat: 'Abriter — Couverture', tc: 'sdn',
+    domaine: 'if', pat: 'immo', cat: 'Abriter — Couverture', tc: 'sdn',
     montant: 1850, score: 92, priorite: 'P1',
     annee: 2026, trim: 'T2', duree: 18,
     impacts: { sec: 3, prod: 2, fin: 2, soc: 1, img: 2 },
@@ -165,7 +184,7 @@ export const PROJETS = [
   {
     id: 2, nom: 'Renouvellement voies ferrees 3 & 4',
     desc: 'Renouvellement complet des voies 3 et 4 du faisceau d\'entree. Usure avancee des rails et traverses, ralentissements imposes a 30 km/h.',
-    pat: 'ferro', cat: 'Voies et ADV', tc: 'sdn',
+    domaine: 'if', pat: 'ferro', cat: 'Voies et ADV', tc: 'sdn',
     montant: 2300, score: 95, priorite: 'P1',
     annee: 2026, trim: 'T1', duree: 24,
     impacts: { expl: 3, cont: 2, cimp: 3, crem: 2 },
@@ -174,7 +193,7 @@ export const PROJETS = [
   {
     id: 3, nom: 'Remplacement Tour en Fosse TF-01',
     desc: 'Remplacement complet de la tour en fosse TF-01 arrivee en fin de vie. Pannes recurrentes impactant la production maintenance.',
-    pat: 'io', cat: 'Production MR — MIF', tc: 'vsg',
+    domaine: 'if', pat: 'io', cat: 'Production MR — MIF', tc: 'vsg',
     montant: 890, score: 88, priorite: 'P1',
     annee: 2026, trim: 'T3', duree: 12,
     impacts: { cont: 3, red: 2, sec: 2, fin: 2, regl: 1, prod: 3 },
@@ -183,7 +202,7 @@ export const PROJETS = [
   {
     id: 4, nom: 'Mise en conformite ICPE station lavage',
     desc: 'Mise en conformite environnementale ICPE de la station de lavage. Echeance reglementaire DREAL fixee au 31/12/2026.',
-    pat: 'io', cat: 'Production MR — MIF', tc: 'sdn',
+    domaine: 'if', pat: 'io', cat: 'Production MR — MIF', tc: 'sdn',
     montant: 620, score: 82, priorite: 'P2',
     annee: 2026, trim: 'T2', duree: 8,
     impacts: { cont: 1, red: 1, sec: 1, fin: 2, regl: 3, prod: 2 },
@@ -192,7 +211,7 @@ export const PROJETS = [
   {
     id: 5, nom: 'Rehabilitation batiment social B12',
     desc: 'Rehabilitation complete du batiment social B12 (vestiaires, sanitaires, salle de repos). Conditions de travail degradees signalees par le CHSCT.',
-    pat: 'immo', cat: 'Amenager — Second oeuvre', tc: 'sdn',
+    domaine: 'if', pat: 'immo', cat: 'Amenager — Second oeuvre', tc: 'sdn',
     montant: 480, score: 71, priorite: 'P2',
     annee: 2026, trim: 'T4', duree: 10,
     impacts: { sec: 1, prod: 1, fin: 1, soc: 3, img: 2 },
@@ -201,7 +220,7 @@ export const PROJETS = [
   {
     id: 6, nom: 'Remplacement pont roulant fosse 2',
     desc: 'Remplacement du pont roulant de la fosse 2 arrive en limite de duree de vie. Rapport de controle technique defavorable.',
-    pat: 'io', cat: 'Levage et manutention', tc: 'sdn',
+    domaine: 'if', pat: 'io', cat: 'Levage et manutention', tc: 'sdn',
     montant: 390, score: 76, priorite: 'P2',
     annee: 2027, trim: 'T1', duree: 6,
     impacts: { cont: 2, red: 1, sec: 2, fin: 1, regl: 2, prod: 2 },
@@ -210,7 +229,7 @@ export const PROJETS = [
   {
     id: 7, nom: 'Mise aux normes electriques Hall B',
     desc: 'Remise aux normes de l\'installation electrique du Hall B. Non-conformites identifiees lors du diagnostic C13.200.',
-    pat: 'immo', cat: 'Amenager — Electricite', tc: 'sdn',
+    domaine: 'if', pat: 'immo', cat: 'Amenager — Electricite', tc: 'sdn',
     montant: 520, score: 74, priorite: 'P2',
     annee: 2027, trim: 'T1', duree: 8,
     impacts: { sec: 2, prod: 1, fin: 1, soc: 1, img: 1 },
@@ -219,7 +238,7 @@ export const PROJETS = [
   {
     id: 8, nom: 'Regeneration catenaire faisceau sud',
     desc: 'Regeneration de l\'alimentation catenaire du faisceau sud. Vetuste des supports et de la ligne de contact.',
-    pat: 'ferro', cat: 'Caténaires et EALE', tc: 'ard',
+    domaine: 'if', pat: 'ferro', cat: 'Caténaires et EALE', tc: 'ard',
     montant: 1400, score: 69, priorite: 'P2',
     annee: 2027, trim: 'T2', duree: 14,
     impacts: { expl: 2, cont: 2, cimp: 2, crem: 2 },
@@ -228,65 +247,105 @@ export const PROJETS = [
   {
     id: 9, nom: 'Reseaux eau / EP zone Nord',
     desc: 'Renovation des reseaux d\'eau potable et d\'eaux pluviales de la zone Nord. Fuites recurrentes et risque de contamination.',
-    pat: 'immo', cat: 'Acheminer — VRD', tc: 'sdn',
+    domaine: 'if', pat: 'immo', cat: 'Acheminer — VRD', tc: 'sdn',
     montant: 275, score: 58, priorite: 'P3',
     annee: 2027, trim: 'T3', duree: 6,
     impacts: { sec: 1, prod: 1, fin: 1, soc: 1, img: 1 },
     roi: 65, conformite: null, phase: 'Maint',
   },
   {
-    id: 10, nom: 'Extension parking agents',
-    desc: 'Extension du parking agents pour absorber l\'augmentation d\'effectifs liee au nouveau plan de transport.',
-    pat: 'immo', cat: 'Acheminer — VRD', tc: 'sdn',
-    montant: 350, score: 42, priorite: 'P3',
-    annee: 2028, trim: 'T1', duree: 8,
-    impacts: { sec: 0, prod: 0, fin: 1, soc: 2, img: 1 },
-    roi: 30, conformite: null, phase: 'Projet',
-  },
-  {
-    id: 11, nom: 'Remplacement bancs de mesure essieux',
-    desc: 'Remplacement des bancs de mesure essieux BM-02 et BM-03 vetustes. Pieces detachees indisponibles.',
-    pat: 'io', cat: 'Production MR — MIT', tc: 'vsg',
-    montant: 180, score: 55, priorite: 'P3',
-    annee: 2028, trim: 'T2', duree: 4,
-    impacts: { cont: 1, red: 1, sec: 1, fin: 1, regl: 1, prod: 1 },
-    roi: 45, conformite: null, phase: 'Maint',
-  },
-  {
-    id: 12, nom: 'Upgrade signalisation poste N1',
-    desc: 'Modernisation du poste de signalisation N1 vers technologie PIPC. Composants obsoletes avec delai d\'approvisionnement critique.',
-    pat: 'ferro', cat: 'Signalisation', tc: 'ard',
-    montant: 950, score: 63, priorite: 'P3',
-    annee: 2028, trim: 'T3', duree: 16,
-    impacts: { expl: 2, cont: 1, cimp: 1, crem: 2 },
-    roi: 190, conformite: null, phase: 'Maint',
-  },
-  {
-    id: 13, nom: 'Restructuration Hall C',
-    desc: 'Restructuration complete du Hall C pour accueillir les nouvelles rames RER NG. Adaptation des voies et de la structure.',
-    pat: 'immo', cat: 'Abriter — Gros oeuvre', tc: 'pno',
-    montant: 2200, score: 45, priorite: 'P3',
-    annee: 2029, trim: 'T1', duree: 24,
-    impacts: { sec: 1, prod: 2, fin: 2, soc: 1, img: 2 },
-    roi: 350, conformite: null, phase: 'Projet',
-  },
-  {
-    id: 14, nom: 'Modernisation portiques de levage',
-    desc: 'Modernisation de l\'ensemble des portiques de levage du site. Mise en conformite avec la nouvelle directive machines 2023/1230.',
-    pat: 'io', cat: 'Levage et manutention', tc: 'vsg',
-    montant: 760, score: 48, priorite: 'P3',
-    annee: 2029, trim: 'T2', duree: 10,
-    impacts: { cont: 1, red: 1, sec: 2, fin: 1, regl: 2, prod: 1 },
-    roi: 110, conformite: 'Dir. machines', phase: 'Maint',
-  },
-  {
-    id: 15, nom: 'Renouvellement catenaire Nord',
+    id: 10, nom: 'Renouvellement catenaire Nord',
     desc: 'Renouvellement complet de la catenaire du faisceau Nord. Programme pluriannuel de regeneration des EALE.',
-    pat: 'ferro', cat: 'Caténaires et EALE', tc: 'sdn',
+    domaine: 'if', pat: 'ferro', cat: 'Caténaires et EALE', tc: 'sdn',
     montant: 1800, score: 40, priorite: 'P3',
     annee: 2030, trim: 'T1', duree: 18,
     impacts: { expl: 2, cont: 1, cimp: 2, crem: 2 },
     roi: 320, conformite: null, phase: 'Maint',
+  },
+  // --- Domaine : Construction neuve ---
+  {
+    id: 11, nom: 'Construction nouveau TC Sud-Est',
+    desc: 'Construction d\'un nouveau technicentre en zone Sud-Est pour absorber la montee en charge du RER NG. Site de 4 hectares, 8 voies de maintenance.',
+    domaine: 'construction', pat: null, cat: 'Technicentre', tc: 'vsg',
+    montant: 45000, score: 85, priorite: 'P1',
+    annee: 2026, trim: 'T1', duree: 48,
+    impacts: { sec: 1, prod: 3, fin: 3, soc: 2, img: 3 },
+    roi: 2800, conformite: null, phase: 'Projet',
+  },
+  {
+    id: 12, nom: 'Extension site Trappes — 4 voies',
+    desc: 'Extension du technicentre de Trappes avec 4 voies supplementaires couvertes pour la maintenance du futur materiel roulant.',
+    domaine: 'construction', pat: null, cat: 'Extension site', tc: 'ttr',
+    montant: 18500, score: 72, priorite: 'P2',
+    annee: 2027, trim: 'T2', duree: 36,
+    impacts: { sec: 1, prod: 3, fin: 2, soc: 2, img: 2 },
+    roi: 1200, conformite: null, phase: 'Projet',
+  },
+  {
+    id: 13, nom: 'Atelier de revision RER NG',
+    desc: 'Creation d\'un atelier dedie a la revision des rames RER NG au sein du TC Saint-Denis. Equipements specifiques nouvelle generation.',
+    domaine: 'construction', pat: null, cat: 'Atelier', tc: 'sdn',
+    montant: 12000, score: 68, priorite: 'P2',
+    annee: 2028, trim: 'T1', duree: 24,
+    impacts: { sec: 1, prod: 3, fin: 2, soc: 1, img: 2 },
+    roi: 950, conformite: null, phase: 'Projet',
+  },
+  // --- Domaine : Capacitaire ---
+  {
+    id: 14, nom: 'Adaptation voies longues RER NG',
+    desc: 'Allongement des voies de maintenance pour accueillir les rames RER NG (130m). Modification des gabarits et des installations de voie.',
+    domaine: 'capacitaire', pat: null, cat: 'Adaptation materiel', tc: 'sdn',
+    montant: 5600, score: 80, priorite: 'P1',
+    annee: 2026, trim: 'T3', duree: 18,
+    impacts: { sec: 1, prod: 3, fin: 2, soc: 1, img: 2 },
+    roi: 750, conformite: null, phase: 'Projet',
+  },
+  {
+    id: 15, nom: 'Augmentation capacite lavage',
+    desc: 'Doublement de la capacite de la station de lavage pour repondre a l\'augmentation du parc roulant (+30% en 2028).',
+    domaine: 'capacitaire', pat: null, cat: 'Capacite production', tc: 'sdn',
+    montant: 2800, score: 65, priorite: 'P2',
+    annee: 2027, trim: 'T4', duree: 14,
+    impacts: { sec: 0, prod: 3, fin: 2, soc: 1, img: 1 },
+    roi: 380, conformite: null, phase: 'Projet',
+  },
+  // --- Domaine : Transformation digitale ---
+  {
+    id: 16, nom: 'Deploiement IoT maintenance predictive',
+    desc: 'Installation de capteurs IoT sur les actifs critiques (vibrations, temperature, usure) et deploiement d\'une plateforme de maintenance predictive basee sur l\'IA.',
+    domaine: 'digital', pat: null, cat: 'IoT / IA', tc: 'sdn',
+    montant: 3200, score: 73, priorite: 'P2',
+    annee: 2027, trim: 'T1', duree: 18,
+    impacts: { sec: 1, prod: 2, fin: 2, soc: 1, img: 2 },
+    roi: 520, conformite: null, phase: 'Projet',
+  },
+  {
+    id: 17, nom: 'Jumeau numerique TC Saint-Denis',
+    desc: 'Modelisation 3D/BIM du technicentre Saint-Denis pour optimiser les flux, planifier les interventions et former les agents.',
+    domaine: 'digital', pat: null, cat: 'BIM / Jumeau numerique', tc: 'sdn',
+    montant: 1500, score: 52, priorite: 'P3',
+    annee: 2028, trim: 'T2', duree: 12,
+    impacts: { sec: 0, prod: 1, fin: 1, soc: 1, img: 2 },
+    roi: 180, conformite: null, phase: 'Projet',
+  },
+  // --- Domaine : RSE / Environnement ---
+  {
+    id: 18, nom: 'Plan decarbonation sites Nord',
+    desc: 'Programme de decarbonation des 5 sites de la tranche Nord : remplacement chaufferies gaz par PAC, panneaux solaires toitures, LED, isolation thermique.',
+    domaine: 'rse', pat: null, cat: 'Decarbonation', tc: 'sdn',
+    montant: 4200, score: 70, priorite: 'P2',
+    annee: 2027, trim: 'T1', duree: 30,
+    impacts: { sec: 0, prod: 0, fin: 2, soc: 1, img: 3 },
+    roi: 350, conformite: 'RE2020', phase: 'Projet',
+  },
+  {
+    id: 19, nom: 'Station de recyclage eaux usees',
+    desc: 'Installation d\'une station de traitement et recyclage des eaux de lavage pour reduire la consommation d\'eau de 60%.',
+    domaine: 'rse', pat: null, cat: 'Eau / Dechets', tc: 'sdn',
+    montant: 1800, score: 58, priorite: 'P3',
+    annee: 2028, trim: 'T3', duree: 10,
+    impacts: { sec: 0, prod: 0, fin: 1, soc: 1, img: 2 },
+    roi: 220, conformite: 'ICPE', phase: 'Projet',
   },
 ];
 
