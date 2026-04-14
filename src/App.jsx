@@ -2016,7 +2016,7 @@ export default function App() {
   return <>
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <img src="/logo-sncf.png" alt="SNCF Voyageurs" />
+        <img src={import.meta.env.BASE_URL + 'logo-sncf.png'} alt="SNCF Voyageurs" />
         <span>Gestion d'Actifs IF</span>
       </div>
 
