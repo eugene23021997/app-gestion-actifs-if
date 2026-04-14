@@ -1,10 +1,16 @@
 import { useState, useMemo } from 'react'
 import './App.css'
 import {
-  TECHNICENTRES, PATRIMOINES, GRANULARITE, OCCURRENCE, IMPACTS, IMPACT_LEVELS,
+  ENTITES, TECHNICENTRES, PATRIMOINES, GRANULARITE, OCCURRENCE, IMPACTS, IMPACT_LEVELS,
   INDICATEURS_GA, RACI_PROCESSUS, OUTILS_SI,
   CYCLE_VIE, DEMO_ASSETS, PROJETS, SCENARIOS, ANNEES,
-  DOMAINES, IMPACTS_GENERIQUES
+  DOMAINES, IMPACTS_GENERIQUES,
+  PHASES_MISSION, MARQUEURS_DEPLOIEMENT,
+  ORGA_ACTUELLE, ORGA_CIBLE, TRAJECTOIRE_ORGA,
+  MARQUEURS_INDUS, INDUS_HISTORIQUE,
+  MATURITE_LABELS, SERVICES_GAIF,
+  COMPETENCES, EQUIPE_ACTUELLE,
+  PROCESSUS_MATURITE
 } from './data'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -417,15 +423,19 @@ function PageDashboard({ budget, projets, onNavigate }) {
 // ─── PAGE: INVENTAIRE ──────────────────────────────────────
 
 function PageInventaire({ assets, setAssets }) {
+  const [filtreEnt, setFiltreEnt] = useState('all')
   const [filtrePat, setFiltrePat] = useState('all')
   const [filtreTC, setFiltreTC] = useState('all')
   const [search, setSearch] = useState('')
   const [modalAsset, setModalAsset] = useState(null) // null=ferme, 'new'=ajout, {asset}=edition
-  const filtered = assets.filter(a =>
-    (filtrePat === 'all' || a.pat === filtrePat) &&
-    (filtreTC === 'all' || a.tc === filtreTC) &&
-    (!search || a.nom.toLowerCase().includes(search.toLowerCase()))
-  )
+  const tcFiltered = filtreEnt === 'all' ? TECHNICENTRES : TECHNICENTRES.filter(t => t.entite === filtreEnt)
+  const filtered = assets.filter(a => {
+    const tcEnt = TECHNICENTRES.find(t => t.id === a.tc)?.entite
+    return (filtreEnt === 'all' || tcEnt === filtreEnt) &&
+      (filtrePat === 'all' || a.pat === filtrePat) &&
+      (filtreTC === 'all' || a.tc === filtreTC) &&
+      (!search || a.nom.toLowerCase().includes(search.toLowerCase()))
+  })
   const nbCrit = assets.filter(a => a.crit >= 2).length
   const nbNonConf = assets.filter(a => !a.conform).length
 
@@ -445,7 +455,7 @@ function PageInventaire({ assets, setAssets }) {
     />}
 
     <div className="kpi-row">
-      <KpiCard icon="📋" label="Total actifs suivis" value={assets.length} sub="3 patrimoines — 10 technicentres" trend="nt" bgIco="#EFF6FF" />
+      <KpiCard icon="📋" label="Total actifs suivis" value={filtered.length} sub={`3 patrimoines — ${TECHNICENTRES.length} technicentres`} trend="nt" bgIco="#EFF6FF" />
       <KpiCard icon="⚠️" label="Actifs critiques" value={nbCrit} sub={`${Math.round(nbCrit / assets.length * 100)}% du parc — Occurrence >= 2`} trend="dn" color="var(--red)" bgIco="#FEE2E2" />
       <KpiCard icon="📛" label="Non-conformites" value={nbNonConf} sub={`${Math.round(nbNonConf / assets.length * 100)}% — Seuil critique : <5%`} trend="dn" color="var(--or)" bgIco="#FEF3C7" />
       <KpiCard icon="✅" label="Taux disponibilite moyen" value={<>87<span>%</span></>} sub="↑ +2pts vs N-1" trend="up" color="var(--gn)" bgIco="#D1FAE5" />
@@ -457,13 +467,17 @@ function PageInventaire({ assets, setAssets }) {
         <div style={{ display: 'flex', gap: 6 }}>
           <input className="fi" style={{ fontSize: 11, padding: '5px 8px', width: 180 }}
             placeholder="Rechercher un actif..." value={search} onChange={e => setSearch(e.target.value)} />
+          <select className="fi" style={{ fontSize: 11, padding: '5px 8px' }} value={filtreEnt} onChange={e => { setFiltreEnt(e.target.value); setFiltreTC('all') }}>
+            <option value="all">Toutes entites</option>
+            {ENTITES.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+          </select>
           <select className="fi" style={{ fontSize: 11, padding: '5px 8px' }} value={filtrePat} onChange={e => setFiltrePat(e.target.value)}>
             <option value="all">Tous patrimoines</option>
             {PATRIMOINES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
           <select className="fi" style={{ fontSize: 11, padding: '5px 8px' }} value={filtreTC} onChange={e => setFiltreTC(e.target.value)}>
             <option value="all">Tous TC</option>
-            {TECHNICENTRES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {tcFiltered.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
           <button className="btn btn-p" style={{ fontSize: 11, padding: '5px 14px' }} onClick={() => setModalAsset('new')}>+ Nouvel actif</button>
         </div>
@@ -844,6 +858,7 @@ function PagePriorisation({ budget, projets, setProjets }) {
   const [selectedId, setSelectedId] = useState(null)
   const [filterDom, setFilterDom] = useState('all')
   const [filterPrio, setFilterPrio] = useState('all')
+  const [filterEnt, setFilterEnt] = useState('all')
   const [modalProjet, setModalProjet] = useState(null) // null=ferme, 'new'=ajout, {projet}=edition
 
   const sorted = useMemo(() => [...projets].sort((a, b) => b.score - a.score), [projets])
@@ -857,10 +872,12 @@ function PagePriorisation({ budget, projets, setProjets }) {
     })
   }, [sorted, budget])
 
-  const filtered = funded.filter(p =>
-    (filterDom === 'all' || p.domaine === filterDom) &&
-    (filterPrio === 'all' || p.priorite === filterPrio)
-  )
+  const filtered = funded.filter(p => {
+    const tcEnt = TECHNICENTRES.find(t => t.id === p.tc)?.entite
+    return (filterEnt === 'all' || tcEnt === filterEnt) &&
+      (filterDom === 'all' || p.domaine === filterDom) &&
+      (filterPrio === 'all' || p.priorite === filterPrio)
+  })
 
   const selected = selectedId ? projets.find(p => p.id === selectedId) : null
   const impactLabels = {
@@ -904,6 +921,11 @@ function PagePriorisation({ budget, projets, setProjets }) {
           </button>
         ))}
       </div>
+      <div style={{ width: 1, height: 24, background: 'var(--g200)', margin: '0 4px' }} />
+      <select className="fi" style={{ fontSize: 10, padding: '4px 8px' }} value={filterEnt} onChange={e => setFilterEnt(e.target.value)}>
+        <option value="all">Toutes entites</option>
+        {ENTITES.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+      </select>
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 11, color: 'var(--g500)' }}>{filtered.length} projet(s) — Enveloppe : <strong>{fmt(budget)} k</strong></span>
         <button className="btn btn-p" style={{ fontSize: 11, padding: '5px 14px' }} onClick={() => setModalProjet('new')}>+ Nouveau projet</button>
@@ -1200,7 +1222,56 @@ function PagePlanActions({ budget, projets }) {
 
 function PageCycleVie() {
   const [phase, setPhase] = useState('exploit')
-  return <div className="card">
+  const [vueCyc, setVueCyc] = useState('cycle')
+  const entiteColors = { tn: '#C8002D', ter: '#1D4ED8', ic: '#7C3AED' }
+
+  if (vueCyc === 'maturite') return <>
+    <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <button className="btn-o" onClick={() => setVueCyc('cycle')}>Cycle de vie</button>
+      <button className="btn-o" style={{ background: '#C8002D', color: '#fff', borderColor: '#C8002D' }}>Maturite processus</button>
+    </div>
+    <div className="card">
+      <div className="card-h">Maturite des processus par entite</div>
+      <div className="card-b">
+        <table className="tbl" style={{ fontSize: 11 }}>
+          <thead><tr><th>Processus</th><th>TN</th><th>TER</th><th>IC</th></tr></thead>
+          <tbody>
+            {PROCESSUS_MATURITE.map((p, i) => <tr key={i}>
+              <td style={{ fontWeight: 500 }}>{p.processus}</td>
+              {['tn', 'ter', 'ic'].map(e => {
+                const m = MATURITE_LABELS[p[e]] || MATURITE_LABELS[0]
+                return <td key={e} style={{ textAlign: 'center' }}>
+                  <span className="chip" style={{ background: m.bg, color: m.color, fontSize: 10, minWidth: 70, display: 'inline-block', textAlign: 'center' }}>{m.label} ({p[e]})</span>
+                </td>
+              })}
+            </tr>)}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: '2px solid #E5E7EB', fontWeight: 700 }}>
+              <td>Moyenne</td>
+              {['tn', 'ter', 'ic'].map(e => {
+                const avg = PROCESSUS_MATURITE.reduce((s, p) => s + p[e], 0) / PROCESSUS_MATURITE.length
+                return <td key={e} style={{ textAlign: 'center', color: entiteColors[e] }}>{avg.toFixed(1)} / 4</td>
+              })}
+            </tr>
+          </tfoot>
+        </table>
+        <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'center' }}>
+          {MATURITE_LABELS.map(m => <div key={m.level} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
+            <div style={{ width: 12, height: 12, borderRadius: 3, background: m.bg, border: `1px solid ${m.color}` }} />
+            <span style={{ color: '#6B7280' }}>{m.level} — {m.label}</span>
+          </div>)}
+        </div>
+      </div>
+    </div>
+  </>
+
+  return <>
+    <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <button className="btn-o" style={{ background: '#C8002D', color: '#fff', borderColor: '#C8002D' }}>Cycle de vie</button>
+      <button className="btn-o" onClick={() => setVueCyc('maturite')}>Maturite processus</button>
+    </div>
+    <div className="card">
     <div className="card-h"><h3>Cycle de vie des actifs IF — PSGA §3.2</h3><span className="ref">Prescriptions Cycle de vie</span></div>
     <div className="card-b">
       <div className="lc-flow">
@@ -1321,6 +1392,7 @@ function PageCycleVie() {
       </div>
     </div>
   </div>
+  </>
 }
 
 // ─── PAGE: GOUVERNANCE ─────────────────────────────────────
@@ -1421,6 +1493,497 @@ function PageGouvernance() {
   </>
 }
 
+// ─── PAGE : FEUILLE DE ROUTE ──────────────────────────────
+function PageFeuilleDeRoute() {
+  const [selectedPhase, setSelectedPhase] = useState(null)
+  const [expandedThemes, setExpandedThemes] = useState({})
+  const totalJalons = PHASES_MISSION.reduce((s, p) => s + p.jalons.length, 0)
+  const jalonsFaits = PHASES_MISSION.reduce((s, p) => s + p.jalons.filter(j => j.fait).length, 0)
+  const totalActions = PHASES_MISSION.reduce((s, p) => s + (p.actions || []).reduce((s2, t) => s2 + t.items.length, 0), 0)
+  const MOIS = Array.from({ length: 13 }, (_, i) => i + 1)
+
+  const toggleTheme = (key) => setExpandedThemes(prev => ({ ...prev, [key]: !prev[key] }))
+
+  return <>
+    <div className="kpi-row">
+      <KpiCard icon="📍" label="Phase actuelle" value="Phase 1 — Diagnostic" />
+      <KpiCard icon="📊" label="Avancement global" value={`${Math.round(jalonsFaits / totalJalons * 100)} %`} trend="up" />
+      <KpiCard icon="✅" label="Jalons realises" value={`${jalonsFaits} / ${totalJalons}`} />
+      <KpiCard icon="📝" label="Actions plan" value={totalActions} sub={`${PHASES_MISSION.reduce((s, p) => s + (p.actions || []).length, 0)} thematiques`} />
+    </div>
+
+    {/* Timeline 13 mois */}
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="card-h">Timeline mission — 13 mois</div>
+      <div className="card-b">
+        <div className="roadmap-timeline">
+          <div className="roadmap-months">
+            {MOIS.map(m => <div key={m} className="roadmap-month-cell">M{m}</div>)}
+          </div>
+          {PHASES_MISSION.map(phase => {
+            const startPct = ((phase.moisDebut - 1) / 13) * 100
+            const widthPct = ((phase.moisFin - phase.moisDebut + 1) / 13) * 100
+            return <div key={phase.id} className="roadmap-bar-row">
+              <div className="roadmap-bar"
+                style={{ left: `${startPct}%`, width: `${widthPct}%`, background: phase.color, cursor: 'pointer', opacity: selectedPhase && selectedPhase !== phase.id ? 0.35 : 1 }}
+                onClick={() => setSelectedPhase(selectedPhase === phase.id ? null : phase.id)}>
+                <span className="roadmap-bar-label">{phase.label}</span>
+              </div>
+            </div>
+          })}
+        </div>
+      </div>
+    </div>
+
+    {/* Cards phases — jalons & livrables */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 18 }}>
+      {PHASES_MISSION.map(phase => <div key={phase.id} className="card"
+        style={{ borderTop: `3px solid ${phase.color}`, opacity: selectedPhase && selectedPhase !== phase.id ? 0.4 : 1, cursor: 'pointer' }}
+        onClick={() => setSelectedPhase(selectedPhase === phase.id ? null : phase.id)}>
+        <div className="card-h" style={{ color: phase.color, fontSize: 13 }}>{phase.label}</div>
+        <div className="card-b" style={{ fontSize: 12 }}>
+          <p style={{ color: '#6B7280', marginBottom: 10, lineHeight: 1.5 }}>{phase.desc}</p>
+          <div style={{ fontWeight: 700, fontSize: 10, textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 6 }}>Jalons</div>
+          {phase.jalons.map((j, i) => <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 11 }}>
+            <span style={{ color: j.fait ? '#10B981' : '#D1D5DB' }}>{j.fait ? '✓' : '○'}</span>
+            <span style={{ color: j.fait ? '#374151' : '#9CA3AF' }}>{j.label}</span>
+            <span style={{ marginLeft: 'auto', color: '#D1D5DB', fontSize: 10 }}>M{j.mois}</span>
+          </div>)}
+          <div style={{ fontWeight: 700, fontSize: 10, textTransform: 'uppercase', color: '#9CA3AF', marginTop: 10, marginBottom: 6 }}>Livrables</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {phase.livrables.map((l, i) => <span key={i} className="chip" style={{ background: phase.bg, color: phase.color, fontSize: 10 }}>{l}</span>)}
+          </div>
+        </div>
+      </div>)}
+    </div>
+
+    {/* Plan d'actions detaille */}
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="card-h">
+        <h3>Plan d'actions detaille</h3>
+        <span style={{ fontSize: 10, color: '#9CA3AF' }}>{totalActions} actions — {PHASES_MISSION.reduce((s, p) => s + (p.actions || []).length, 0)} thematiques</span>
+      </div>
+      <div className="card-b">
+        {PHASES_MISSION.map(phase => {
+          if (selectedPhase && selectedPhase !== phase.id) return null
+          if (!phase.actions) return null
+          return <div key={phase.id} style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: `2px solid ${phase.color}` }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: phase.color }} />
+              <span style={{ fontWeight: 700, fontSize: 13, color: phase.color }}>{phase.label}</span>
+              <span style={{ fontSize: 10, color: '#9CA3AF' }}>Mois {phase.moisDebut}{phase.moisFin !== phase.moisDebut ? ` a ${phase.moisFin}` : ''}</span>
+            </div>
+            {phase.actions.map((theme, ti) => {
+              const themeKey = `${phase.id}-${ti}`
+              const isOpen = expandedThemes[themeKey] !== false // open by default
+              return <div key={ti} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--g50)', borderRadius: 8, cursor: 'pointer', border: '1px solid var(--g100)' }}
+                  onClick={() => toggleTheme(themeKey)}>
+                  <span style={{ fontSize: 14 }}>{theme.icon}</span>
+                  <span style={{ fontWeight: 700, fontSize: 12, flex: 1 }}>{theme.theme}</span>
+                  <span style={{ fontSize: 10, color: '#9CA3AF' }}>{theme.items.length} actions</span>
+                  <span style={{ fontSize: 10, color: '#9CA3AF' }}>{isOpen ? '▾' : '▸'}</span>
+                </div>
+                {isOpen && <div style={{ padding: '4px 0 4px 20px' }}>
+                  {theme.items.map((item, ii) => <div key={ii} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 12px', fontSize: 11, borderLeft: `2px solid ${phase.bg}` }}>
+                    <span style={{ color: phase.color, marginTop: 1, flexShrink: 0 }}>●</span>
+                    <span style={{ flex: 1, lineHeight: 1.5, color: '#374151' }}>{item.label}</span>
+                    <span style={{ flexShrink: 0, fontSize: 9, color: '#9CA3AF', background: '#F3F4F6', borderRadius: 4, padding: '2px 6px', whiteSpace: 'nowrap' }}>M{item.mois}{item.semaine ? ` S${item.semaine}` : ''}</span>
+                  </div>)}
+                </div>}
+              </div>
+            })}
+          </div>
+        })}
+      </div>
+    </div>
+
+    {/* Trajectoire deploiement */}
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="card-h">Trajectoire de deploiement TN → TER → IC</div>
+      <div className="card-b">
+        <table className="tbl">
+          <thead><tr><th>Annee</th><th>Trimestre</th><th>Entite</th><th>Action</th><th>Statut</th></tr></thead>
+          <tbody>
+            {MARQUEURS_DEPLOIEMENT.map((m, i) => {
+              const ent = ENTITES.find(e => e.id === m.entite) || { label: 'Toutes', color: '#374151', bg: '#F3F4F6' }
+              const statutStyle = m.statut === 'fait' ? { background: '#D1FAE5', color: '#065F46' }
+                : m.statut === 'en_cours' ? { background: '#FEF3C7', color: '#92400E' }
+                : { background: '#EFF6FF', color: '#1E40AF' }
+              return <tr key={i}>
+                <td style={{ fontWeight: 600 }}>{m.annee}</td>
+                <td>{m.trimestre}</td>
+                <td><span className="chip" style={{ background: ent.bg, color: ent.color, fontSize: 10 }}>{ent.label}</span></td>
+                <td>{m.action}</td>
+                <td><span className="chip" style={{ ...statutStyle, fontSize: 10 }}>{m.statut === 'fait' ? '✓ Fait' : m.statut === 'en_cours' ? '● En cours' : '○ Planifie'}</span></td>
+              </tr>
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </>
+}
+
+// ─── PAGE : ORGANISATION CIBLE ────────────────────────────
+function PageOrgaCible() {
+  const [vue, setVue] = useState('cible')
+  const orga = vue === 'cible' ? ORGA_CIBLE : ORGA_ACTUELLE
+
+  function OrgaNode({ node, level = 0 }) {
+    const [open, setOpen] = useState(level < 2)
+    const hasChildren = node.children && node.children.length > 0
+    return <div style={{ marginLeft: level * 24 }}>
+      <div className="orga-node" onClick={() => hasChildren && setOpen(!open)} style={{ cursor: hasChildren ? 'pointer' : 'default' }}>
+        <span className="orga-expand">{hasChildren ? (open ? '▾' : '▸') : '·'}</span>
+        <div style={{ flex: 1 }}>
+          <div className="orga-label">{node.label}</div>
+          {node.responsable && <div className="orga-resp">{node.responsable}</div>}
+        </div>
+        <span className="orga-badge">{node.effectif} ETP</span>
+      </div>
+      {hasChildren && open && node.children.map((c, i) => <OrgaNode key={i} node={c} level={level + 1} />)}
+    </div>
+  }
+
+  return <>
+    <div className="kpi-row">
+      <KpiCard icon="👤" label="ETP actuel" value="15" sub="GAIF TN" />
+      <KpiCard icon="👥" label="ETP cible 2028" value="35" sub="A2P national" trend="up" />
+      <KpiCard icon="🏢" label="Entites couvertes" value="1 / 3" sub="TN uniquement" />
+      <KpiCard icon="📈" label="Taux de couverture" value="33 %" trend="up" />
+    </div>
+
+    <div style={{ display: 'flex', gap: 8, margin: '18px 0' }}>
+      <button className={`btn-o ${vue === 'actuelle' ? 'active' : ''}`}
+        style={vue === 'actuelle' ? { background: '#C8002D', color: '#fff', borderColor: '#C8002D' } : {}}
+        onClick={() => setVue('actuelle')}>Organisation actuelle (TN)</button>
+      <button className={`btn-o ${vue === 'cible' ? 'active' : ''}`}
+        style={vue === 'cible' ? { background: '#C8002D', color: '#fff', borderColor: '#C8002D' } : {}}
+        onClick={() => setVue('cible')}>Organisation cible A2P (2028)</button>
+    </div>
+
+    <div className="card">
+      <div className="card-h">{vue === 'cible' ? 'Organigramme cible — A2P / BL DSP' : 'Organigramme actuel — GAIF TN GPI'}</div>
+      <div className="card-b">
+        <OrgaNode node={orga} />
+      </div>
+    </div>
+
+    {/* Trajectoire effectifs */}
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="card-h">Trajectoire effectifs 2026 — 2028</div>
+      <div className="card-b" style={{ height: 280 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={TRAJECTOIRE_ORGA} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+            <XAxis dataKey="annee" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} />
+            <Tooltip content={({ active, payload }) => active && payload?.length ? <div className="custom-tooltip">
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>{payload[0]?.payload?.label}</div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 6 }}>{payload[0]?.payload?.desc}</div>
+              {payload.map((p, i) => <div key={i} style={{ fontSize: 11 }}><span style={{ color: p.fill }}>●</span> {p.name} : {p.value} ETP</div>)}
+            </div> : null} />
+            <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="tn" name="TN" stackId="a" fill="#C8002D" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="ter" name="TER" stackId="a" fill="#1D4ED8" />
+            <Bar dataKey="ic" name="IC" stackId="a" fill="#7C3AED" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  </>
+}
+
+// ─── PAGE : KPI INDUSTRIALISATION ────────────────────────
+function PageKpiIndus() {
+  const [expanded, setExpanded] = useState(null)
+
+  return <>
+    <div className="kpi-row">
+      {MARQUEURS_INDUS.map(m => {
+        const avg = m.kpis.reduce((s, k) => {
+          const progress = k.inverse ? (1 - Math.min(k.valeur, k.cible * 2) / (k.cible * 2)) * 100 : (k.valeur / k.cible) * 100
+          return s + Math.min(progress, 100)
+        }, 0) / m.kpis.length
+        return <div key={m.id} className="kpi" style={{ borderLeft: `3px solid ${m.color}` }}>
+          <div className="kpi-icon">{m.icon}</div>
+          <div className="kpi-label">{m.label}</div>
+          <div className="kpi-value" style={{ color: m.color }}>{Math.round(avg)} %</div>
+          <div style={{ background: '#F3F4F6', borderRadius: 4, height: 6, marginTop: 6 }}>
+            <div style={{ background: m.color, borderRadius: 4, height: 6, width: `${Math.min(avg, 100)}%`, transition: 'width 0.3s' }} />
+          </div>
+        </div>
+      })}
+    </div>
+
+    {/* Radar chart */}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 18 }}>
+      <div className="card">
+        <div className="card-h">Maturite industrialisation — Actuel vs Cible</div>
+        <div className="card-b" style={{ height: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={MARQUEURS_INDUS.map(m => {
+              const avg = m.kpis.reduce((s, k) => s + (k.inverse ? Math.max(0, 100 - (k.valeur / k.cible) * 100) : (k.valeur / k.cible) * 100), 0) / m.kpis.length
+              return { label: m.label, actuel: Math.min(Math.round(avg), 100), cible: 100 }
+            })}>
+              <PolarGrid stroke="#E5E7EB" />
+              <PolarAngleAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
+              <Radar name="Actuel" dataKey="actuel" stroke="#C8002D" fill="#C8002D" fillOpacity={0.3} />
+              <Radar name="Cible" dataKey="cible" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.1} strokeDasharray="5 5" />
+              <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-h">Evolution trimestrielle</div>
+        <div className="card-b" style={{ height: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={INDUS_HISTORIQUE} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+              <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+              <Line type="monotone" dataKey="clients" name="Clients" stroke="#C8002D" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="agilite" name="Agilite" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="juste_besoin" name="Juste besoin" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="innovation" name="Innovation" stroke="#7C3AED" strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+
+    {/* Detail par marqueur */}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 18 }}>
+      {MARQUEURS_INDUS.map(m => <div key={m.id} className="card" style={{ borderTop: `3px solid ${m.color}` }}>
+        <div className="card-h" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+          onClick={() => setExpanded(expanded === m.id ? null : m.id)}>
+          <span>{m.icon}</span> {m.label}
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9CA3AF' }}>{expanded === m.id ? '▾' : '▸'}</span>
+        </div>
+        <div className="card-b" style={{ fontSize: 12 }}>
+          <p style={{ color: '#6B7280', marginBottom: 8 }}>{m.desc}</p>
+          {(expanded === m.id) && m.kpis.map((k, i) => {
+            const pct = k.inverse
+              ? Math.max(0, Math.min(100, (1 - k.valeur / (k.cible * 3)) * 100))
+              : Math.min(100, (k.valeur / k.cible) * 100)
+            return <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                <span>{k.label}</span>
+                <span style={{ fontWeight: 600 }}>{k.valeur}{k.unite} <span style={{ color: '#9CA3AF' }}>/ {k.cible}{k.unite}</span>
+                  {k.tendance === 'up' ? ' ↑' : k.tendance === 'down' ? ' ↓' : ''}</span>
+              </div>
+              <div style={{ background: '#F3F4F6', borderRadius: 4, height: 6 }}>
+                <div style={{ background: m.color, borderRadius: 4, height: 6, width: `${pct}%`, transition: 'width 0.3s' }} />
+              </div>
+            </div>
+          })}
+        </div>
+      </div>)}
+    </div>
+  </>
+}
+
+// ─── PAGE : CATALOGUE DE SERVICES ──────────────────────────
+function PageCatalogue() {
+  const allServices = SERVICES_GAIF.flatMap(g => g.services)
+  const avgMaturite = allServices.reduce((s, sv) => s + sv.maturite.tn, 0) / allServices.length
+  const deplTer = allServices.filter(s => s.maturite.ter > 0).length
+  const deplIc = allServices.filter(s => s.maturite.ic > 0).length
+
+  function matBadge(level) {
+    const m = MATURITE_LABELS[level] || MATURITE_LABELS[0]
+    return <span className="chip" style={{ background: m.bg, color: m.color, fontSize: 10, minWidth: 70, textAlign: 'center' }}>{m.label}</span>
+  }
+
+  return <>
+    <div className="kpi-row">
+      <KpiCard icon="📦" label="Total services" value={allServices.length} />
+      <KpiCard icon="📊" label="Maturite moyenne TN" value={`${avgMaturite.toFixed(1)} / 4`} />
+      <KpiCard icon="🔵" label="Services deployes TER" value={`${deplTer} / ${allServices.length}`} />
+      <KpiCard icon="🟣" label="Services deployes IC" value={`${deplIc} / ${allServices.length}`} />
+    </div>
+
+    {SERVICES_GAIF.map((groupe, gi) => <div key={gi} className="card" style={{ marginTop: 14 }}>
+      <div className="card-h" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>{groupe.icon}</span> {groupe.mission}
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9CA3AF' }}>{groupe.services.length} services</span>
+      </div>
+      <div className="card-b">
+        <table className="tbl" style={{ fontSize: 11 }}>
+          <thead><tr><th>Service</th><th>Type</th><th>Parties prenantes</th><th>TN</th><th>TER</th><th>IC</th></tr></thead>
+          <tbody>
+            {groupe.services.map(s => <tr key={s.id}>
+              <td>
+                <div style={{ fontWeight: 600 }}>{s.label}</div>
+                <div style={{ color: '#9CA3AF', fontSize: 10 }}>{s.desc}</div>
+              </td>
+              <td><span className="chip" style={{
+                background: s.type === 'FREE' ? '#EDE9FE' : '#FEF3C7',
+                color: s.type === 'FREE' ? '#7C3AED' : '#92400E',
+                fontSize: 10
+              }}>{s.type}</span></td>
+              <td><div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                {s.parties.map((p, pi) => <span key={pi} className="chip" style={{ fontSize: 9, background: '#F3F4F6', color: '#6B7280' }}>{p}</span>)}
+              </div></td>
+              <td>{matBadge(s.maturite.tn)}</td>
+              <td>{matBadge(s.maturite.ter)}</td>
+              <td>{matBadge(s.maturite.ic)}</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+    </div>)}
+
+    {/* Heatmap maturite */}
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="card-h">Heatmap maturite — Services x Entites</div>
+      <div className="card-b">
+        <div className="matrice-maturite">
+          <div className="mat-header"><div className="mat-cell mat-label-cell">Service</div><div className="mat-cell">TN</div><div className="mat-cell">TER</div><div className="mat-cell">IC</div></div>
+          {allServices.map(s => <div key={s.id} className="mat-row">
+            <div className="mat-cell mat-label-cell" style={{ fontSize: 10 }}>{s.label}</div>
+            {['tn', 'ter', 'ic'].map(e => {
+              const m = MATURITE_LABELS[s.maturite[e]] || MATURITE_LABELS[0]
+              return <div key={e} className="mat-cell" style={{ background: m.bg, color: m.color, fontWeight: 600, fontSize: 10 }}>{s.maturite[e]}</div>
+            })}
+          </div>)}
+        </div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 10, justifyContent: 'center' }}>
+          {MATURITE_LABELS.map(m => <div key={m.level} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10 }}>
+            <div style={{ width: 12, height: 12, borderRadius: 3, background: m.bg, border: `1px solid ${m.color}` }} />
+            <span style={{ color: '#6B7280' }}>{m.level} — {m.label}</span>
+          </div>)}
+        </div>
+      </div>
+    </div>
+  </>
+}
+
+// ─── PAGE : RESSOURCES & COMPETENCES ──────────────────────
+function PageRessources() {
+  const totalEtp = EQUIPE_ACTUELLE.reduce((s, e) => s + e.nb, 0)
+  const gapsCritiques = COMPETENCES.filter(c => c.criticite === 'haute' && (c.niveau_cible - c.niveau_actuel) >= 2).length
+  const avgCouverture = COMPETENCES.reduce((s, c) => s + (c.niveau_actuel / c.niveau_cible), 0) / COMPETENCES.length * 100
+  const formations = COMPETENCES.filter(c => c.niveau_cible - c.niveau_actuel >= 2).length
+
+  return <>
+    <div className="kpi-row">
+      <KpiCard icon="👤" label="ETP actuel" value={totalEtp} sub="GAIF TN" />
+      <KpiCard icon="🔴" label="Ecarts critiques" value={gapsCritiques} sub="competences a renforcer" />
+      <KpiCard icon="📊" label="Couverture competences" value={`${Math.round(avgCouverture)} %`} />
+      <KpiCard icon="🎓" label="Formations prioritaires" value={formations} />
+    </div>
+
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 18 }}>
+      {/* Equipe actuelle */}
+      <div className="card">
+        <div className="card-h">Equipe actuelle — GAIF TN</div>
+        <div className="card-b">
+          <table className="tbl" style={{ fontSize: 11 }}>
+            <thead><tr><th>Role</th><th>Pole</th><th>Effectif</th></tr></thead>
+            <tbody>
+              {EQUIPE_ACTUELLE.map((e, i) => <tr key={i}>
+                <td style={{ fontWeight: 500 }}>{e.role}</td>
+                <td><span className="chip" style={{ fontSize: 9, background: '#F3F4F6', color: '#6B7280' }}>{e.pole}</span></td>
+                <td style={{ fontWeight: 600, textAlign: 'center' }}>{e.nb}</td>
+              </tr>)}
+              <tr style={{ borderTop: '2px solid #E5E7EB' }}>
+                <td style={{ fontWeight: 700 }}>Total</td><td></td>
+                <td style={{ fontWeight: 700, textAlign: 'center' }}>{totalEtp}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Radar competences */}
+      <div className="card">
+        <div className="card-h">Radar competences — Actuel vs Cible</div>
+        <div className="card-b" style={{ height: 320 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={COMPETENCES.map(c => ({ label: c.label.length > 25 ? c.label.substring(0, 22) + '...' : c.label, actuel: c.niveau_actuel, cible: c.niveau_cible }))}>
+              <PolarGrid stroke="#E5E7EB" />
+              <PolarAngleAxis dataKey="label" tick={{ fontSize: 8 }} />
+              <PolarRadiusAxis domain={[0, 4]} tick={{ fontSize: 9 }} tickCount={5} />
+              <Radar name="Niveau actuel" dataKey="actuel" stroke="#C8002D" fill="#C8002D" fillOpacity={0.3} />
+              <Radar name="Niveau cible" dataKey="cible" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.1} strokeDasharray="5 5" />
+              <Legend iconSize={10} wrapperStyle={{ fontSize: 10 }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+
+    {/* Tableau ecarts */}
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="card-h">Analyse des ecarts de competences</div>
+      <div className="card-b">
+        <table className="tbl" style={{ fontSize: 11 }}>
+          <thead><tr><th>Competence</th><th>Domaine</th><th>Actuel</th><th>Cible</th><th>Ecart</th><th>Criticite</th></tr></thead>
+          <tbody>
+            {[...COMPETENCES].sort((a, b) => (b.niveau_cible - b.niveau_actuel) - (a.niveau_cible - a.niveau_actuel)).map(c => {
+              const ecart = c.niveau_cible - c.niveau_actuel
+              return <tr key={c.id}>
+                <td style={{ fontWeight: 500 }}>{c.label}</td>
+                <td><span className="chip" style={{ fontSize: 9, background: c.domaine === 'Savoir' ? '#DBEAFE' : '#FEF3C7', color: c.domaine === 'Savoir' ? '#1D4ED8' : '#92400E' }}>{c.domaine}</span></td>
+                <td style={{ textAlign: 'center' }}>
+                  <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+                    {[1, 2, 3, 4].map(v => <div key={v} style={{ width: 10, height: 10, borderRadius: '50%', background: v <= c.niveau_actuel ? '#C8002D' : '#E5E7EB' }} />)}
+                  </div>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+                    {[1, 2, 3, 4].map(v => <div key={v} style={{ width: 10, height: 10, borderRadius: '50%', background: v <= c.niveau_cible ? '#3B82F6' : '#E5E7EB' }} />)}
+                  </div>
+                </td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: ecart >= 2 ? '#DC2626' : ecart >= 1 ? '#F59E0B' : '#10B981' }}>
+                  {ecart > 0 ? `+${ecart}` : '0'}
+                </td>
+                <td><span className="chip" style={{
+                  fontSize: 9,
+                  background: c.criticite === 'haute' ? '#FEE2E2' : '#FEF3C7',
+                  color: c.criticite === 'haute' ? '#DC2626' : '#92400E'
+                }}>{c.criticite}</span></td>
+              </tr>
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* Recommandations */}
+    <div className="card" style={{ marginTop: 18, borderLeft: '3px solid #C8002D' }}>
+      <div className="card-h">Recommandations prioritaires</div>
+      <div className="card-b" style={{ fontSize: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ color: '#C8002D', fontWeight: 700 }}>1.</span>
+            <span><strong>Recruter 2 profils conduite du changement</strong> pour accompagner l'extension TER/IC — competence critique avec ecart maximal</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ color: '#C8002D', fontWeight: 700 }}>2.</span>
+            <span><strong>Former 4 agents aux outils SI</strong> (Maximo, BIM, GMAO) — maturite actuelle insuffisante pour le deploiement national</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ color: '#C8002D', fontWeight: 700 }}>3.</span>
+            <span><strong>Programme de pilotage transverse</strong> — renforcer la capacite de coordination multi-entites avant l'integration TER</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ color: '#C8002D', fontWeight: 700 }}>4.</span>
+            <span><strong>Certification ISO 55001</strong> pour les profils cles — monter le niveau de maturite gestion d'actifs de 3 a 4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
+}
+
 // ─── MAIN APP ──────────────────────────────────────────────
 
 const PAGES = [
@@ -1433,6 +1996,16 @@ const PAGES = [
   { id: 'cyc', label: 'Cycle de vie', icon: '🔄' },
   { id: 'gouv', label: 'Gouvernance & RACI', icon: '👥' },
 ]
+
+const PAGES_INDUS = [
+  { id: 'roadmap', label: 'Feuille de route', icon: '🗺' },
+  { id: 'orga', label: 'Organisation cible', icon: '🏛' },
+  { id: 'kpi-indus', label: 'KPI Industrialisation', icon: '📉' },
+  { id: 'catalogue', label: 'Catalogue de services', icon: '📦' },
+  { id: 'rh', label: 'Ressources & Competences', icon: '🎓' },
+]
+
+const ALL_PAGES = [...PAGES, ...PAGES_INDUS]
 
 export default function App() {
   const [page, setPage] = useState('dash')
@@ -1459,6 +2032,16 @@ export default function App() {
         )}
       </nav>
 
+      <div className="sidebar-section">Industrialisation</div>
+      <nav className="sidebar-nav">
+        {PAGES_INDUS.map(p =>
+          <button key={p.id} className={`nav-item ${page === p.id ? 'active' : ''}`} onClick={() => setPage(p.id)}>
+            <span className="nav-icon">{p.icon}</span>
+            {p.label}
+          </button>
+        )}
+      </nav>
+
       <div className="sidebar-section">Referentiels</div>
       <nav className="sidebar-nav">
         <button className="nav-item"><span className="nav-icon">📘</span>PSGA v2</button>
@@ -1478,7 +2061,7 @@ export default function App() {
 
     <div className="main">
       <div className="topbar">
-        <h1>{PAGES.find(p => p.id === page)?.icon} {PAGES.find(p => p.id === page)?.label}</h1>
+        <h1>{ALL_PAGES.find(p => p.id === page)?.icon} {ALL_PAGES.find(p => p.id === page)?.label}</h1>
         <div className="topbar-badges">
           <span className="tbadge" style={{ background: '#EFF6FF', color: '#1D4ED8' }}>ISO 55001</span>
           <span className="tbadge" style={{ background: 'var(--red-l)', color: 'var(--red)' }}>PSGA Transilien v2</span>
@@ -1495,6 +2078,11 @@ export default function App() {
           {page === 'plan' && <PagePlanActions budget={budget} projets={projets} />}
           {page === 'cyc' && <PageCycleVie />}
           {page === 'gouv' && <PageGouvernance />}
+          {page === 'roadmap' && <PageFeuilleDeRoute />}
+          {page === 'orga' && <PageOrgaCible />}
+          {page === 'kpi-indus' && <PageKpiIndus />}
+          {page === 'catalogue' && <PageCatalogue />}
+          {page === 'rh' && <PageRessources />}
         </div>
       </div>
     </div>

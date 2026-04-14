@@ -279,3 +279,29 @@ select.fi{cursor:pointer}
 .recharts-default-tooltip{border-radius:8px !important;box-shadow:0 4px 12px rgba(0,0,0,.1) !important}
 .recharts-legend-item-text{font-size:10px !important}
 .recharts-cartesian-axis-tick-value{fill:var(--g400) !important}
+
+/* ===== FEUILLE DE ROUTE (ROADMAP) ===== */
+.roadmap-timeline{position:relative;padding:8px 0}
+.roadmap-months{display:grid;grid-template-columns:repeat(13,1fr);gap:1px;margin-bottom:8px}
+.roadmap-month-cell{text-align:center;font-size:9px;font-weight:700;color:var(--g400);padding:4px 0;background:var(--g50);border-radius:4px}
+.roadmap-bar-row{position:relative;height:32px;margin-bottom:4px}
+.roadmap-bar{position:absolute;height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:opacity .2s}
+.roadmap-bar-label{color:#fff;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== ORGANISATION CIBLE (ORG TREE) ===== */
+.orga-node{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid var(--g100);margin-bottom:4px;background:#fff;transition:background .15s}
+.orga-node:hover{background:var(--g50)}
+.orga-expand{font-size:10px;color:var(--g400);width:14px;text-align:center;flex-shrink:0}
+.orga-label{font-size:12px;font-weight:600;color:var(--dk)}
+.orga-resp{font-size:10px;color:var(--g400);margin-top:1px}
+.orga-badge{font-size:10px;font-weight:700;color:var(--red);background:var(--red-l);padding:2px 8px;border-radius:10px;white-space:nowrap}
+
+/* ===== HEATMAP MATURITE ===== */
+.matrice-maturite{display:flex;flex-direction:column;gap:2px}
+.mat-header,.mat-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:2px}
+.mat-header{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--g400)}
+.mat-cell{padding:6px 8px;border-radius:4px;text-align:center}
+.mat-label-cell{text-align:left;background:var(--g50)}
+
+/* ===== SIDEBAR SCROLL ===== */
+.sidebar{overflow-y:auto}
